@@ -20,22 +20,22 @@ static locale_t c_locale;
 
 locale_t get_c_locale(void)
 {
-  if(!c_locale_initialized)
-  {
-    c_locale_initialized = 1;
-    c_locale = newlocale(LC_ALL_MASK, "C", NULL);
-  }
-  return c_locale;
+    if(!c_locale_initialized)
+    {
+        c_locale_initialized = 1;
+        c_locale = newlocale(LC_ALL_MASK, "C", NULL);
+    }
+    return c_locale;
 }
 
 JL_DLLEXPORT double jl_strtod_c(const char *nptr, char **endptr)
 {
-  return strtod_l(nptr, endptr, get_c_locale());
+    return strtod_l(nptr, endptr, get_c_locale());
 }
 
 JL_DLLEXPORT float jl_strtof_c(const char *nptr, char **endptr)
 {
-  return strtof_l(nptr, endptr, get_c_locale());
+    return strtof_l(nptr, endptr, get_c_locale());
 }
 
 
@@ -221,7 +221,7 @@ JL_DLLEXPORT double jl_strtod_c(const char *nptr, char **endptr)
               end = p;
           }
           else if (strncmp(p, decimal_point, decimal_point_len) == 0)
-            goto invalid_string;
+              goto invalid_string;
           /* For the other cases, we need not convert the decimal
              point */
       }
@@ -287,7 +287,7 @@ JL_DLLEXPORT double jl_strtod_c(const char *nptr, char **endptr)
 
 JL_DLLEXPORT float jl_strtof_c(const char *nptr, char **endptr)
 {
-  return (float) jl_strtod_c(nptr, endptr);
+    return (float) jl_strtod_c(nptr, endptr);
 }
 
 #endif
