@@ -2293,6 +2293,8 @@ static int type_morespecific_(jl_value_t *a, jl_value_t *b, int invariant, jl_ty
     if (jl_is_type_type(a) && !invariant) {
         jl_value_t *tp0a = jl_tparam0(a);
         if (jl_is_typevar(tp0a)) {
+            if (b == (jl_value_t*)jl_bottomtype_type)
+                return 0;
             jl_value_t *ub = ((jl_tvar_t*)tp0a)->ub;
             if (jl_is_kind(b) && !jl_subtype((jl_value_t*)jl_any_type, ub))
                 return 1;
@@ -2326,7 +2328,13 @@ static int type_morespecific_(jl_value_t *a, jl_value_t *b, int invariant, jl_ty
                         return 1;
                 }
                 if (super && ttb->name == jl_type_typename && jl_is_typevar(jl_tparam0(b))) {
-                    if (type_morespecific_(a, jl_tparam0(b), 1, env))
+                    jl_tvar_t *bp0 = (jl_tvar_t*)jl_tparam0(b);
+                    if (a == (jl_value_t*)jl_bottomtype_type) {
+                        if (bp0->lb == (jl_value_t*)jl_bottom_type &&
+                            bp0->ub != (jl_value_t*)jl_bottom_type)
+                            return 1;
+                    }
+                    if (type_morespecific_(a, (jl_value_t*)bp0, 1, env))
                         return 1;
                 }
                 assert(jl_nparams(tta) == jl_nparams(ttb));
