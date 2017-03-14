@@ -210,13 +210,27 @@ end
 # The master process uses this to connect to the worker and subsequently
 # setup a all-to-all network.
 function read_worker_host_port(io::IO)
-    while true
-        conninfo = readline(io)
+    t0 = time()
+    timeout = worker_timeout()
+
+    ntries = 1000
+    while ntries > 0
+        readtask = @schedule readline(io)
+        yield()
+        while !istaskdone(readtask) && ((time() - t0) < timeout)
+            sleep(0.05)
+        end
+        !istaskdone(readtask) && break
+
+        conninfo = wait(readtask)
+        ntries -= 1
         bind_addr, port = parse_connection_info(conninfo)
         if bind_addr != ""
             return bind_addr, port
         end
     end
+    close(io)
+    error("Error trying to read worker host:port from worker")
 end
 
 function parse_connection_info(str)
@@ -402,8 +416,14 @@ function create_worker(manager, wconfig)
 
     # initiate a connect. Does not wait for connection completion in case of TCP.
     w = Worker()
+    local r_s, w_s
+    try
+        (r_s, w_s) = connect(manager, w.id, wconfig)
+    catch e
+        deregister_worker(w.id)
+        rethrow(e)
+    end
 
-    (r_s, w_s) = connect(manager, w.id, wconfig)
     w = Worker(w.id, r_s, w_s, manager; config=wconfig)
     # install a finalizer to perform cleanup if necessary
     finalizer(w, (w)->if myid() == 1 manage(w.manager, w.id, w.config, :finalize) end)
@@ -801,7 +821,7 @@ function deregister_worker(pg, pid)
             end
         end
 
-        if myid() == 1
+        if myid() == 1 && isdefined(w, :config)
             # Notify the cluster manager of this workers death
             manage(w.manager, w.id, w.config, :deregister)
             if PGRP.topology != :all_to_all

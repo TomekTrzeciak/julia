@@ -1269,7 +1269,15 @@ end
 if DoFullTest
     pids=addprocs(4);
     @test_throws ErrorException rmprocs(pids; waitfor=0.001);
-    rmprocs(pids)
+    # wait for workers to be removed
+    while any(x -> (x in procs()), pids)
+        sleep(0.1)
+    end
+end
+
+# addprocs with an invalid host name - github issue #20372
+if DoFullTest
+    @test_throws CompositeException addprocs(["errorhost20372"])
 end
 
 # Auto serialization of globals from Main.
